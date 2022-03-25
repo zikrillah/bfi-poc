@@ -1,0 +1,12 @@
+node('nplus-01') {
+    stage('Preparation') {
+    git 'https://github.com/zikrillah/bfi-poc.git'
+    }
+    stage('Copy file') {
+    sh 'sudo cp -a api-dev* /etc/nginx/api-conf.d'
+    }
+    stage('Reload Nginx service') {
+    sh 'sudo nginx -s reload'
+    sh 'sudo nginx-sync.sh'
+    }    
+}
