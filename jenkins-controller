@@ -1,0 +1,17 @@
+node {
+    stage('Copy form GitHub repository') {
+        // Get some code from a GitHub repository
+        git 'https://github.com/zikrillah/bfi-poc.git'
+    }
+    stage('Prepare the roles') {
+        // install controller role
+        sh 'ansible-galaxy install nginxinc.nginx_controller_generate_token'
+        sh 'ansible-galaxy install nginxinc.nginx_controller_gateway'
+        sh 'ansible-galaxy install nginxinc.nginx_controller_application'
+        sh 'ansible-galaxy install nginxinc.nginx_controller_component'
+    }
+    stage('Deploy config') {
+        // Run the deploy config
+    sh 'ansible-playbook gateway-app-comp.yaml'
+    }    
+}
