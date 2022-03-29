@@ -1,0 +1,90 @@
+- hosts: localhost
+  gather_facts: no
+
+  vars:
+    nginx_controller_user_email: "wcs@wcs.co.id"
+    nginx_controller_user_password: "wcs2access"
+    nginx_controller_fqdn: "ctrl.bfi.co.id"
+    nginx_controller_validate_certs: false
+
+  tasks:
+    - name: Retrieve the NGINX Controller auth token
+      include_role:
+        name: nginxinc.nginx_controller_generate_token
+
+    - name: Create a gateway
+      include_role:
+        name: nginxinc.nginx_controller_gateway
+      vars:
+        # controller.auth_token: output by previous role in example
+        nginx_controller_environmentName: "poc"
+        nginx_controller_gateway:
+          metadata:
+            name: gw.dev-legacy01
+            displayName: "legacy 01"
+            description: "legacy gw"
+          desiredState:
+            ingress:
+              uris:
+                "http://devlegacy01.bfi.co.id":
+                  {}
+              placement:
+                instanceRefs:
+                  - ref: "/infrastructure/locations/unspecified/instances/nginx03"
+                    listenIps:
+                      - "172.16.2.100"
+                  - ref: "/infrastructure/locations/unspecified/instances/nginx04"
+                    listenIps:
+                      - "172.16.2.100"
+            ha:
+              "isEnabled":
+                true
+    - name: Configure the application
+      include_role:
+        name: nginxinc.nginx_controller_application
+      vars:
+        nginx_controller_environmentName: "poc"
+        nginx_controller_app:
+          metadata:
+            name: "app.dev-legacy01"
+            displayName: "legacy 01"
+            description: ""
+    - name: Configure the component
+      include_role:
+        name: nginxinc.nginx_controller_component
+      vars:
+        nginx_controller_environmentName: "poc"
+        nginx_controller_appName: "app.dev-legacy01"
+        nginx_controller_component:
+          metadata:
+            name: comp.dev-legacy01
+            displayName: "legacy 01"
+            description: ""
+          desiredState:
+            ingress:
+              uris:
+                "http://devlegacy01.bfi.co.id":
+                  {} # use defaults
+              gatewayRefs:
+                - ref: "/services/environments/poc/gateways/gw.dev-legacy01"
+            backend:
+              workloadGroups:
+                wg.dev-legacy:
+                  uris:
+                    "http://10.1.10.11:8121":
+                      isDown: true
+                    "http://10.1.10.12:8121":
+                      {} # use defaults
+                    "http://10.1.10.11:5821":
+                      {} # use defaults
+                    "http://10.1.10.12:5821":
+                      failTimeout: 10s
+                  loadBalancingMethod:
+                    type: ROUND_ROBIN
+              monitoring:
+                response:
+                  status:
+                    range:
+                      startCode: 200
+                      endCode: 201
+                    match: true
